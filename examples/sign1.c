@@ -132,6 +132,46 @@ main(int argc, char **argv) {
 
     return(0);
 }
+int RegisterID(xmlNodePtr node, const xmlChar* idName)
+{
+    xmlAttrPtr attr;
+    // xmlAttrPtr tmp;
+    xmlChar* name;
+       
+    assert(node);
+    assert(node->doc);
+    assert(idName);
+
+    /* find pointer to id attribute */
+    attr = xmlHasProp(node, idName);
+    if((attr == NULL) || (attr->children == NULL)) {
+        fprintf(stderr, "Error: failed to get \"%s\" attribute\n", idName);
+        return(-1);
+    }
+   
+    /* get the attribute (id) value */
+    name = xmlNodeListGetString(node->doc, attr->children, 1);
+    if(name == NULL) {
+        fprintf(stderr, "Error: failed to get \"%s\" attribute value\n", idName);
+        return(-1);   
+    }
+   
+    /* check that we don't have that id already registered */
+    // tmp = xmlGetID(node->doc, name);
+    // if(tmp == NULL) {
+    //     fprintf(stderr, "Error: id \"%s\" not found\n", name);
+    //     xmlFree(name);
+    //     return(-1);
+    // }
+   
+    /* finally register id */
+    xmlAddID(NULL, node->doc, name, attr);
+
+    /* and do not forget to cleanup */
+    xmlFree(name);
+
+    return(0);
+}
 
 /**
  * sign_file:
@@ -145,7 +185,6 @@ main(int argc, char **argv) {
 int
 sign_file(const char* tmpl_file, const char* key_file) {
     xmlDocPtr doc = NULL;
-    xmlNodePtr node = NULL;
     xmlSecDSigCtxPtr dsigCtx = NULL;
     int res = -1;
 
@@ -159,10 +198,30 @@ sign_file(const char* tmpl_file, const char* key_file) {
         goto done;
     }
 
-    /* find start node */
-    node = xmlSecFindNode(xmlDocGetRootElement(doc), xmlSecNodeSignature, xmlSecDSigNs);
-    if(node == NULL) {
-        fprintf(stderr, "Error: start node not found in \"%s\"\n", tmpl_file);
+    const xmlChar xmlSecNodeCertificates[] = "certificates";
+    const xmlChar xmlSecNodeCertificatesNS[] = "http://vde.com/fnn/stb/certificates/1.4.0";
+    xmlNodePtr certsNode = xmlSecFindNode(xmlDocGetRootElement(doc), xmlSecNodeCertificates, xmlSecNodeCertificatesNS);
+    if (certsNode == NULL) {
+        fprintf(stderr, "Error: unable to find node \"%s\"\n", xmlSecNodeCertificates);
+        goto done;
+    }
+    // const xmlChar myXmlSecAttrId[]                    = "certificates";
+    // const xmlChar*           myXmlSecDSigIds[] = { myXmlSecAttrId, NULL };
+    // xmlSecAddIDs(doc, certsNode, myXmlSecDSigIds);
+    if (RegisterID(certsNode, BAD_CAST "id") < 0) {
+        fprintf(stderr, "Error: unable to register id for certsNode\n");
+        goto done;
+    }
+    xmlNodePtr certNode = xmlSecFindNode(xmlDocGetRootElement(doc), BAD_CAST "certificate", xmlSecNodeCertificatesNS);
+    if (certNode == NULL) {
+        fprintf(stderr, "Error: unable to find node \"%s\"\n", xmlSecNodeCertificates);
+        goto done;
+    }
+    // const xmlChar myXmlSecAttrId[]                    = "certificates";
+    // const xmlChar*           myXmlSecDSigIds[] = { myXmlSecAttrId, NULL };
+    // xmlSecAddIDs(doc, certNode, myXmlSecDSigIds);
+    if (RegisterID(certNode, BAD_CAST "id") < 0) {
+        fprintf(stderr, "Error: unable to register id for certNode\n");
         goto done;
     }
 
@@ -186,11 +245,23 @@ sign_file(const char* tmpl_file, const char* key_file) {
         goto done;
     }
 
-    /* sign the template */
-    if(xmlSecDSigCtxSign(dsigCtx, node) < 0) {
-        fprintf(stderr,"Error: signature failed\n");
-        goto done;
-    }
+    /* signa all nodes */
+    xmlNodePtr node = xmlDocGetRootElement(doc);
+    // while (true)
+    // {
+        node = xmlSecFindNode(node, xmlSecNodeSignature, xmlSecDSigNs);
+        if (node == NULL)
+        {
+            fprintf(stderr, "Error: start node not found in \"%s\"\n", tmpl_file);
+            goto done;
+        }
+        /* sign the template */
+        if (xmlSecDSigCtxSign(dsigCtx, node) < 0)
+        {
+            fprintf(stderr, "Error: signature failed\n");
+            goto done;
+        }
+    // }
 
     /* print signed document to stdout */
     xmlDocDump(stdout, doc);
