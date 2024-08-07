@@ -16,10 +16,6 @@ MIIC0zCCAnmgAwIBAgIIVewcyLIooQYwCgYIKoZIzj0EAwIwczELMAkGA1UE BhMCREUxEjAQBgNVBAc
                     <sig:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
                     <sig:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"/>
                     <sig:Reference URI="#vendor1">
-                        <sig:Transforms>
-                            <sig:Transform Algorithm=
-                              "http://www.w3.org/2000/09/xmldsig#enveloped-signature" />
-                        </sig:Transforms>
                         <sig:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
                         <sig:DigestValue></sig:DigestValue>
                     </sig:Reference>

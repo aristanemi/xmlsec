@@ -319,6 +319,8 @@ int do_sign_node(xmlNodePtr node, const char * key_file)
         }
 
     ret = 0;
+
+     xmlSecDSigCtxDebugDump(dsigCtx, stdout);
 done:
     /* cleanup */
     if(dsigCtx != NULL) {

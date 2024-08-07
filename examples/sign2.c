@@ -167,7 +167,7 @@ sign_file(const char* xml_file, const char* key_file) {
 
     /* create signature template for RSA-SHA1 enveloped signature */
     signNode = xmlSecTmplSignatureCreate(doc, xmlSecTransformExclC14NId,
-                                         xmlSecTransformRsaSha1Id, NULL);
+                                         xmlSecTransformEcdsaSha256Id, NULL);
     if(signNode == NULL) {
         fprintf(stderr, "Error: failed to create signature template\n");
         goto done;
@@ -230,7 +230,6 @@ sign_file(const char* xml_file, const char* key_file) {
 
     /* print signed document to stdout */
     xmlDocDump(stdout, doc);
-
     /* success */
     res = 0;
 

@@ -2,7 +2,7 @@
 #
 #
 PROGRAMS = \
-	sign1 xpath1 verify1
+	sign1 xpath1 verify1 sign2
 CC	= gcc
 CFLAGS	+= -g $(shell xmlsec1-config --cflags) -DUNIX_SOCKETS -Wall -Wextra -Wl,-rpath=/usr/local/lib -g
 LDLIBS	+= -g $(shell xmlsec1-config --libs)
