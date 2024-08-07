@@ -35,6 +35,122 @@
 #include <xmlsec/xmldsig.h>
 #include <xmlsec/crypto.h>
 
+// using xpath to get all signature nodes
+#include <libxml/xpath.h>
+#include <libxml/xpathInternals.h>
+
+
+
+/**
+ * register_namespaces:
+ * @xpathCtx:		the pointer to an XPath context.
+ * @nsList:		the list of known namespaces in 
+ *			"<prefix1>=<href1> <prefix2>=href2> ..." format.
+ *
+ * Registers namespaces from @nsList in @xpathCtx.
+ *
+ * Returns 0 on success and a negative value otherwise.
+ */
+int 
+register_namespaces(xmlXPathContextPtr xpathCtx, const xmlChar* nsList) {
+    xmlChar* nsListDup;
+    xmlChar* prefix;
+    xmlChar* href;
+    xmlChar* next;
+    
+    assert(xpathCtx);
+    assert(nsList);
+
+    nsListDup = xmlStrdup(nsList);
+    if(nsListDup == NULL) {
+	fprintf(stderr, "Error: unable to strdup namespaces list\n");
+	return(-1);	
+    }
+    
+    next = nsListDup; 
+    while(next != NULL) {
+	/* skip spaces */
+	while((*next) == ' ') next++;
+	if((*next) == '\0') break;
+
+	/* find prefix */
+	prefix = next;
+	next = (xmlChar*)xmlStrchr(next, '=');
+	if(next == NULL) {
+	    fprintf(stderr,"Error: invalid namespaces list format\n");
+	    xmlFree(nsListDup);
+	    return(-1);	
+	}
+	*(next++) = '\0';	
+	
+	/* find href */
+	href = next;
+	next = (xmlChar*)xmlStrchr(next, ' ');
+	if(next != NULL) {
+	    *(next++) = '\0';	
+	}
+
+	/* do register namespace */
+	if(xmlXPathRegisterNs(xpathCtx, prefix, href) != 0) {
+	    fprintf(stderr,"Error: unable to register NS with prefix=\"%s\" and href=\"%s\"\n", prefix, href);
+	    xmlFree(nsListDup);
+	    return(-1);	
+	}
+    }
+    
+    xmlFree(nsListDup);
+    return(0);
+}
+
+/**
+ * print_xpath_nodes:
+ * @nodes:		the nodes set.
+ * @output:		the output file handle.
+ *
+ * Prints the @nodes content to @output.
+ */
+void
+print_xpath_nodes(xmlNodeSetPtr nodes, FILE* output) {
+    xmlNodePtr cur;
+    int size;
+    int i;
+    
+    assert(output);
+    size = (nodes) ? nodes->nodeNr : 0;
+    
+    fprintf(output, "Result (%d nodes):\n", size);
+    for(i = 0; i < size; ++i) {
+	assert(nodes->nodeTab[i]);
+	
+	if(nodes->nodeTab[i]->type == XML_NAMESPACE_DECL) {
+	    xmlNsPtr ns;
+	    
+	    ns = (xmlNsPtr)nodes->nodeTab[i];
+	    cur = (xmlNodePtr)ns->next;
+	    if(cur->ns) { 
+	        fprintf(output, "= namespace \"%s\"=\"%s\" for node %s:%s\n", 
+		    ns->prefix, ns->href, cur->ns->href, cur->name);
+	    } else {
+	        fprintf(output, "= namespace \"%s\"=\"%s\" for node %s\n", 
+		    ns->prefix, ns->href, cur->name);
+	    }
+	} else if(nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
+	    cur = nodes->nodeTab[i];   	    
+	    if(cur->ns) { 
+    	        fprintf(output, "= element node \"%s:%s\"\n", 
+		    cur->ns->href, cur->name);
+	    } else {
+    	        fprintf(output, "= element node \"%s\"\n", 
+		    cur->name);
+	    }
+	} else {
+	    cur = nodes->nodeTab[i];    
+	    fprintf(output, "= node \"%s\": type %d\n", cur->name, cur->type);
+	}
+    }
+}
+
+
 int sign_file(const char* tmpl_file, const char* key_file);
 
 int
@@ -186,6 +302,8 @@ int
 sign_file(const char* tmpl_file, const char* key_file) {
     xmlDocPtr doc = NULL;
     xmlSecDSigCtxPtr dsigCtx = NULL;
+    xmlXPathContextPtr xpathCtx = NULL;
+    xmlXPathObjectPtr xpathObj = NULL;
     int res = -1;
 
     assert(tmpl_file);
@@ -205,9 +323,6 @@ sign_file(const char* tmpl_file, const char* key_file) {
         fprintf(stderr, "Error: unable to find node \"%s\"\n", xmlSecNodeCertificates);
         goto done;
     }
-    // const xmlChar myXmlSecAttrId[]                    = "certificates";
-    // const xmlChar*           myXmlSecDSigIds[] = { myXmlSecAttrId, NULL };
-    // xmlSecAddIDs(doc, certsNode, myXmlSecDSigIds);
     if (RegisterID(certsNode, BAD_CAST "id") < 0) {
         fprintf(stderr, "Error: unable to register id for certsNode\n");
         goto done;
@@ -217,9 +332,6 @@ sign_file(const char* tmpl_file, const char* key_file) {
         fprintf(stderr, "Error: unable to find node \"%s\"\n", xmlSecNodeCertificates);
         goto done;
     }
-    // const xmlChar myXmlSecAttrId[]                    = "certificates";
-    // const xmlChar*           myXmlSecDSigIds[] = { myXmlSecAttrId, NULL };
-    // xmlSecAddIDs(doc, certNode, myXmlSecDSigIds);
     if (RegisterID(certNode, BAD_CAST "id") < 0) {
         fprintf(stderr, "Error: unable to register id for certNode\n");
         goto done;
@@ -245,6 +357,36 @@ sign_file(const char* tmpl_file, const char* key_file) {
         goto done;
     }
 
+    // xpath evaluation
+    /* Create xpath evaluation context */
+    xpathCtx = xmlXPathNewContext(doc);
+    if(xpathCtx == NULL) {
+        fprintf(stderr,"Error: unable to create new XPath context\n");
+        goto done;
+    }
+    
+    /* Register namespaces from list (if any) */
+    const xmlChar* nsList = BAD_CAST "sig=http://www.w3.org/2000/09/xmldsig#";
+    if((nsList != NULL) && (register_namespaces(xpathCtx, nsList) < 0)) {
+        fprintf(stderr,"Error: failed to register namespaces list \"%s\"\n", nsList);
+        xmlXPathFreeContext(xpathCtx); 
+        xmlFreeDoc(doc); 
+        return(-1);
+    }
+
+    /* Evaluate xpath expression */
+    const xmlChar* xpathExpr = BAD_CAST "//sig:Signature";
+    xpathObj = xmlXPathEvalExpression(xpathExpr, xpathCtx);
+    if(xpathObj == NULL) {
+        fprintf(stderr,"Error: unable to evaluate xpath expression \"%s\"\n", xpathExpr);
+        xmlXPathFreeContext(xpathCtx); 
+        xmlFreeDoc(doc); 
+        return(-1);
+    }
+
+    /* Print results */
+    print_xpath_nodes(xpathObj->nodesetval, stdout);
+
     /* signa all nodes */
     xmlNodePtr node = xmlDocGetRootElement(doc);
     // while (true)
@@ -255,12 +397,23 @@ sign_file(const char* tmpl_file, const char* key_file) {
             fprintf(stderr, "Error: start node not found in \"%s\"\n", tmpl_file);
             goto done;
         }
+
+    xmlNodeSetPtr nodes = xpathObj->nodesetval;
+    int size = (nodes) ? nodes->nodeNr : 0;
+    for(int i = 0; i < size; ++i) {
+        assert(nodes->nodeTab[i]);
+        
+        xmlNodePtr cur;
+        if(nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
+            cur = nodes->nodeTab[i];
+        }
         /* sign the template */
-        if (xmlSecDSigCtxSign(dsigCtx, node) < 0)
+        if (xmlSecDSigCtxSign(dsigCtx, cur) < 0)
         {
             fprintf(stderr, "Error: signature failed\n");
             goto done;
         }
+    }
     // }
 
     /* print signed document to stdout */
@@ -270,6 +423,12 @@ sign_file(const char* tmpl_file, const char* key_file) {
     res = 0;
 
 done:
+    /* Cleanup */
+    if (xpathObj)
+        xmlXPathFreeObject(xpathObj);
+    if (xpathCtx)
+        xmlXPathFreeContext(xpathCtx); 
+
     /* cleanup */
     if(dsigCtx != NULL) {
         xmlSecDSigCtxDestroy(dsigCtx);

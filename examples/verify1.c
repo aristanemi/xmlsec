@@ -131,6 +131,48 @@ main(int argc, char **argv) {
     return(0);
 }
 
+
+int RegisterID(xmlNodePtr node, const xmlChar* idName)
+{
+    xmlAttrPtr attr;
+    // xmlAttrPtr tmp;
+    xmlChar* name;
+       
+    assert(node);
+    assert(node->doc);
+    assert(idName);
+
+    /* find pointer to id attribute */
+    attr = xmlHasProp(node, idName);
+    if((attr == NULL) || (attr->children == NULL)) {
+        fprintf(stderr, "Error: failed to get \"%s\" attribute\n", idName);
+        return(-1);
+    }
+   
+    /* get the attribute (id) value */
+    name = xmlNodeListGetString(node->doc, attr->children, 1);
+    if(name == NULL) {
+        fprintf(stderr, "Error: failed to get \"%s\" attribute value\n", idName);
+        return(-1);   
+    }
+   
+    /* check that we don't have that id already registered */
+    // tmp = xmlGetID(node->doc, name);
+    // if(tmp == NULL) {
+    //     fprintf(stderr, "Error: id \"%s\" not found\n", name);
+    //     xmlFree(name);
+    //     return(-1);
+    // }
+   
+    /* finally register id */
+    xmlAddID(NULL, node->doc, name, attr);
+
+    /* and do not forget to cleanup */
+    xmlFree(name);
+
+    return(0);
+}
+
 /**
  * verify_file:
  * @xml_file:           the signed XML file name.
@@ -154,6 +196,27 @@ verify_file(const char* xml_file, const char* key_file) {
     doc = xmlReadFile(xml_file, NULL, XML_PARSE_PEDANTIC | XML_PARSE_NONET);
     if ((doc == NULL) || (xmlDocGetRootElement(doc) == NULL)){
         fprintf(stderr, "Error: unable to parse file \"%s\"\n", xml_file);
+        goto done;
+    }
+
+        const xmlChar xmlSecNodeCertificates[] = "certificates";
+    const xmlChar xmlSecNodeCertificatesNS[] = "http://vde.com/fnn/stb/certificates/1.4.0";
+    xmlNodePtr certsNode = xmlSecFindNode(xmlDocGetRootElement(doc), xmlSecNodeCertificates, xmlSecNodeCertificatesNS);
+    if (certsNode == NULL) {
+        fprintf(stderr, "Error: unable to find node \"%s\"\n", xmlSecNodeCertificates);
+        goto done;
+    }
+    if (RegisterID(certsNode, BAD_CAST "id") < 0) {
+        fprintf(stderr, "Error: unable to register id for certsNode\n");
+        goto done;
+    }
+    xmlNodePtr certNode = xmlSecFindNode(xmlDocGetRootElement(doc), BAD_CAST "certificate", xmlSecNodeCertificatesNS);
+    if (certNode == NULL) {
+        fprintf(stderr, "Error: unable to find node \"%s\"\n", xmlSecNodeCertificates);
+        goto done;
+    }
+    if (RegisterID(certNode, BAD_CAST "id") < 0) {
+        fprintf(stderr, "Error: unable to register id for certNode\n");
         goto done;
     }
 
