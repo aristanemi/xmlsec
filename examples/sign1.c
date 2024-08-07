@@ -289,6 +289,44 @@ int RegisterID(xmlNodePtr node, const xmlChar* idName)
     return(0);
 }
 
+int do_sign_node(xmlNodePtr node, const char * key_file)
+{
+    int ret = -1;
+    xmlSecDSigCtxPtr dsigCtx = NULL;
+    /* create signature context, we don't need keys manager in this example */
+    dsigCtx = xmlSecDSigCtxCreate(NULL);
+    if(dsigCtx == NULL) {
+        fprintf(stderr,"Error: failed to create signature context\n");
+        goto done;
+    }
+
+    /* load private key, assuming that there is not password */
+    dsigCtx->signKey = xmlSecCryptoAppKeyLoadEx(key_file, xmlSecKeyDataTypePrivate, xmlSecKeyDataFormatPkcs8Pem, NULL, NULL, NULL);
+    if(dsigCtx->signKey == NULL) {
+        fprintf(stderr,"Error: failed to load private pem key from \"%s\"\n", key_file);
+        goto done;
+    }
+    /* set key name to the file name, this is just an example! */
+    if(xmlSecKeySetName(dsigCtx->signKey, BAD_CAST key_file) < 0) {
+        fprintf(stderr,"Error: failed to set key name for key from \"%s\"\n", key_file);
+        goto done;
+    }
+        /* sign the template */
+        if (xmlSecDSigCtxSign(dsigCtx, node) < 0)
+        {
+            fprintf(stderr, "Error: signature failed\n");
+            goto done;
+        }
+
+    ret = 0;
+done:
+    /* cleanup */
+    if(dsigCtx != NULL) {
+        xmlSecDSigCtxDestroy(dsigCtx);
+    }
+    return ret;
+}
+
 /**
  * sign_file:
  * @tmpl_file:          the signature template file name.
@@ -301,7 +339,6 @@ int RegisterID(xmlNodePtr node, const xmlChar* idName)
 int
 sign_file(const char* tmpl_file, const char* key_file) {
     xmlDocPtr doc = NULL;
-    xmlSecDSigCtxPtr dsigCtx = NULL;
     xmlXPathContextPtr xpathCtx = NULL;
     xmlXPathObjectPtr xpathObj = NULL;
     int res = -1;
@@ -334,26 +371,6 @@ sign_file(const char* tmpl_file, const char* key_file) {
     }
     if (RegisterID(certNode, BAD_CAST "id") < 0) {
         fprintf(stderr, "Error: unable to register id for certNode\n");
-        goto done;
-    }
-
-    /* create signature context, we don't need keys manager in this example */
-    dsigCtx = xmlSecDSigCtxCreate(NULL);
-    if(dsigCtx == NULL) {
-        fprintf(stderr,"Error: failed to create signature context\n");
-        goto done;
-    }
-
-    /* load private key, assuming that there is not password */
-    dsigCtx->signKey = xmlSecCryptoAppKeyLoadEx(key_file, xmlSecKeyDataTypePrivate, xmlSecKeyDataFormatPem, NULL, NULL, NULL);
-    if(dsigCtx->signKey == NULL) {
-        fprintf(stderr,"Error: failed to load private pem key from \"%s\"\n", key_file);
-        goto done;
-    }
-
-    /* set key name to the file name, this is just an example! */
-    if(xmlSecKeySetName(dsigCtx->signKey, BAD_CAST key_file) < 0) {
-        fprintf(stderr,"Error: failed to set key name for key from \"%s\"\n", key_file);
         goto done;
     }
 
@@ -406,12 +423,11 @@ sign_file(const char* tmpl_file, const char* key_file) {
         xmlNodePtr cur;
         if(nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
             cur = nodes->nodeTab[i];
-        }
-        /* sign the template */
-        if (xmlSecDSigCtxSign(dsigCtx, cur) < 0)
-        {
-            fprintf(stderr, "Error: signature failed\n");
-            goto done;
+            if (do_sign_node(cur, key_file) < 0)
+            {
+                fprintf(stderr, "Error: failed to sign node\n");
+                goto done;
+            }
         }
     }
     // }
@@ -428,12 +444,6 @@ done:
         xmlXPathFreeObject(xpathObj);
     if (xpathCtx)
         xmlXPathFreeContext(xpathCtx); 
-
-    /* cleanup */
-    if(dsigCtx != NULL) {
-        xmlSecDSigCtxDestroy(dsigCtx);
-    }
-
     if(doc != NULL) {
         xmlFreeDoc(doc);
     }

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fnn:fnn xmlns:sig="http://www.w3.org/2000/09/xmldsig#"
+    xmlns:fnn="http://vde.com/fnn/stb/certificates/1.4.0">
+    <!-- FNN Zertifikatssatz Steuerbox (mit XML-Signatur des Betreibers) -->
+    <fnn:certificates id="certificates" version="1.4.0">
+        <!-- Liste Herstellerzertifikate -->
+        <fnn:vendor>
+            <!-- Herstellerzertifikat (mit XML-Signatur des Herstellers) -->
+            <fnn:certificate id="vendor1" type="sig">
+                <fnn:pem encoding="base64Binary">
+MIIC0zCCAnmgAwIBAgIIVewcyLIooQYwCgYIKoZIzj0EAwIwczELMAkGA1UE BhMCREUxEjAQBgNVBAcTCUV0dGxpbmdlbjETMBEGA1UEChMKVklWQVZJUyBB RzEgMB4GA1UEAxMXQ0xTIFNvZnR3YXJlIENBIDAxIDIwMjMxGTAXBgNVBA0T EEZPUiBURVNUSU5HIE9OTFkwHhcNMjMwNzAxMDAwMDAwWhcNMjgwNjMwMjM1 OTU5WjBzMQswCQYDVQQGEwJERTESMBAGA1UEBxMJRXR0bGluZ2VuMRMwEQYD VQQKEwpWSVZBVklTIEFHMSAwHgYDVQQDExdDTFMgU29mdHdhcmUgQ0EgMDEg MjAyMzEZMBcGA1UEDRMQRk9SIFRFU1RJTkcgT05MWTBZMBMGByqGSM49AgEG CCqGSM49AwEHA0IABN8qhzQe3T1xGBSpBb6dIoAZsbiIuAc937/8Ba61L0B/ OwSnLQZj90CyfiNBhACDSRpEudoqa+rb5wIi/Q6Mj5KjgfYwgfMwEgYDVR0T AQH/BAgwBgEB/wIBATAdBgNVHQ4EFgQUTBLm7NObnXGtN0Jx5nvePdLNyMww gY4GA1UdIwSBhjCBg6F3pHUwczELMAkGA1UEBhMCREUxEjAQBgNVBAcTCUV0 dGxpbmdlbjETMBEGA1UEChMKVklWQVZJUyBBRzEgMB4GA1UEAxMXQ0xTIFNv ZnR3YXJlIENBIDAxIDIwMjMxGTAXBgNVBA0TEEZPUiBURVNUSU5HIE9OTFmC CFXsHMiyKKEGMA4GA1UdDwEB/wQEAwIBBjAdBgNVHSUEFjAUBggrBgEFBQcD AwYIKwYBBQUHAwgwCgYIKoZIzj0EAwIDSAAwRQIgAevKGymbnDMV9w5rKuEM k6igxQdWZIl8VAHujKj85z0CIQD/outCJ/BXqpWflzI3B+modjFSvutD7hCd UXb/MIW1DA==
+                </fnn:pem>
+            </fnn:certificate>
+            <sig:Signature>
+                <sig:SignedInfo>
+                    <sig:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+                    <sig:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"/>
+                    <sig:Reference URI="#vendor1">
+                        <sig:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+                        <sig:DigestValue></sig:DigestValue>
+                    </sig:Reference>
+                </sig:SignedInfo>
+                <sig:SignatureValue></sig:SignatureValue>
+            </sig:Signature>
+            <!-- Herstellerzertifikat (mit XML-Signatur des Herstellers) -->
+            <fnn:certificate id="vendor2" type="sig">
+                <fnn:pem encoding="base64Binary">
+VENDOR CERT 2
+                </fnn:pem>
+            </fnn:certificate>
+            <sig:Signature>
+                <sig:SignedInfo>
+                    <sig:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+                    <sig:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"/>
+                    <sig:Reference URI="#vendor2">
+                        <sig:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+                        <sig:DigestValue></sig:DigestValue>
+                    </sig:Reference>
+                </sig:SignedInfo>
+                <sig:SignatureValue></sig:SignatureValue>
+            </sig:Signature>
+        </fnn:vendor>
+        <!-- Liste Betreiberzertifikate (ohne XML-Signatur) -->
+        <fnn:operator>
+            <fnn:certificate id="operator1" type="sig">
+                <fnn:pem encoding="base64Binary">
+OPERATOR CERT 1
+                </fnn:pem>
+            </fnn:certificate>
+            <fnn:certificate id="operator2" type="sig">
+                <fnn:pem encoding="base64Binary">
+OPERATOR CERT 2
+                </fnn:pem>
+            </fnn:certificate>
+        </fnn:operator>
+        <!-- Liste Gateway-Zertifikate (End- oder CA-Zertifikate, wenn leer dann Pinning, ohne XMLSignatur) -->
+        <fnn:gateway>
+            <fnn:certificate id="gateway1" type="tls">
+                <fnn:pem encoding="base64Binary">
+GATEWAY CERT 1
+                </fnn:pem>
+            </fnn:certificate>
+        </fnn:gateway>
+    </fnn:certificates>
+    <!-- XML-Signatur des gesamten Zertifikatssatzes durch den Betreiber -->
+    <sig:Signature>
+        <sig:SignedInfo>
+            <sig:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+            <sig:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"/>
+            <sig:Reference URI="#certificates">
+                <sig:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+                <sig:DigestValue></sig:DigestValue>
+            </sig:Reference>
+        </sig:SignedInfo>
+        <sig:SignatureValue></sig:SignatureValue>
+    </sig:Signature>
+</fnn:fnn>
