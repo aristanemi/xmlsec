@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-./configure --host=arm-linux-gnueabihf \
-    --with-sysroot=/opt/sysroot \ 
+if [ ! -e configure ]; then
+    ./autogen.sh
+fi
+export CFLAGS="--sysroot=/opt/sysroot"
+export LIBXML_LIBS="-L/opt/sysroot/lib -L/opt/sysroot/usr/lib -lxml2 -lz -lm -ldl" 
+./configure \
+    --host=arm-linux-gnueabihf \
+    --prefix="$(pwd)/install" \
     --with-openssl=/opt/sysroot/usr \
     --with-libxml=/opt/sysroot/usr \
-    --without-libltdl --disable-crypto-dl \
-    --enable-debugging \
+    --disable-crypto-dl \
     --disable-apps-crypto-dl \
     --disable-static \
-    --with-libxml=/opt/sysroot/usr
-make
+    --enable-debugging
+make -j8
