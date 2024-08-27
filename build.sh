@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-if [ ! -e configure ]; then
-    ./autogen.sh
-fi
+set -o errexit
+
 export CFLAGS="--sysroot=/opt/sysroot"
 export LIBXML_LIBS="-L/opt/sysroot/lib -L/opt/sysroot/usr/lib -lxml2 -lz -lm -ldl" 
-./configure \
+./autogen.sh \
     --host=arm-linux-gnueabihf \
     --prefix="$(pwd)/install" \
     --with-openssl=/opt/sysroot/usr \
@@ -12,5 +11,6 @@ export LIBXML_LIBS="-L/opt/sysroot/lib -L/opt/sysroot/usr/lib -lxml2 -lz -lm -ld
     --disable-crypto-dl \
     --disable-apps-crypto-dl \
     --disable-static \
+    --disable-static-linking \
     --enable-debugging
 make -j8

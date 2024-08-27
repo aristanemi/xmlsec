@@ -3,10 +3,10 @@
 #
 PROGRAMS = \
 	sign1
-
+LIBDIR=../install
 CC	= arm-linux-gnueabihf-gcc
 CFLAGS	+= -g $(shell ../xmlsec1-config --cflags) -DUNIX_SOCKETS -Wall -Wextra --sysroot=/opt/sysroot
-LDLIBS	+= -g $(shell ../xmlsec1-config --libs)
+LDLIBS	+= -g $(shell ../xmlsec1-config --libs) -Wl,-rpath -Wl,$(LIBDIR)
 
 all: $(PROGRAMS)
 
